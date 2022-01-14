@@ -58,5 +58,73 @@ class OAuth {
       );
     }
   }
+
+  async naverUserCheck() {
+    const oAuthUserInfo = this.body;
+
+    try {
+      const user = await StudentStorage.findOneBySnsId(oAuthUserInfo.snsId);
+
+      if (user.success) {
+        return { success: true, checkedId: user.result.studentId };
+      }
+      return { success: false, msg: '비회원(회원가입이 필요합니다.)' };
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  async naverLogin() {
+    const oAuthUserInfo = this.body;
+
+    try {
+      const naverUserCheck = await this.naverUserCheck();
+
+      if (naverUserCheck.success) {
+        const clubNum = await StudentStorage.findOneByLoginedId(
+          naverUserCheck.checkedId
+        );
+        const userInfo = await StudentStorage.findOneById(
+          naverUserCheck.checkedId
+        );
+
+        const jwt = await Auth.createJWT(userInfo, clubNum);
+
+        return { success: true, msg: '로그인에 성공하셨습니다.', jwt };
+      }
+      return {
+        success: false,
+        msg: '비회원(회원가입이 필요합니다.)',
+        name: oAuthUserInfo.name,
+        email: oAuthUserInfo.email,
+        snsId: oAuthUserInfo.snsId,
+      };
+    } catch (err) {
+      return Error.ctrl('서버 에러입니다. 서버 개발자에게 얘기해주세요.', err);
+    }
+  }
+
+  async naverSignUp() {
+    const saveInfo = this.body;
+
+    try {
+      const checkedIdAndEmail = await Util.checkIdAndEmail(client);
+
+      if (checkedIdAndEmail.saveable) {
+        saveInfo.hash = '';
+        saveInfo.passwordSalt = '';
+
+        const response = await StudentStorage.snsSave(saveInfo);
+
+        if (response) {
+          return { success: true, msg: '회원가입에 성공하셨습니다.', saveInfo };
+        }
+        return { success: false, msg: '회원가입에 실패하셨습니다.' };
+      }
+      return checkedIdAndEmail;
+    } catch (err) {
+      return Error.ctrl('', err);
+    }
+  }
 }
 module.exports = OAuth;
