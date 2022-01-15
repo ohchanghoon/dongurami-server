@@ -6,8 +6,8 @@ const Student = require('../../models/services/Student/Student');
 
 const process = {
   login: async (req, res) => {
-    const student = new Student(req);
-    const response = await student.naverLogin();
+    const oAuth = new OAuth(req);
+    const response = await oAuth.naverLogin();
 
     if (response.success) {
       logger.info(`GET /api/naver/login 200: ${response.msg}`);
