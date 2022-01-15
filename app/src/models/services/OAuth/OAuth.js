@@ -6,6 +6,7 @@ const Auth = require('../Auth/Auth');
 // const Student = require('../Student/Student');
 const OAuthUtil = require('./utils');
 const StudentStorage = require('../Student/StudentStorage');
+const makeResponse = require('../../utils/makeResponse');
 
 class OAuth {
   constructor(req) {
@@ -37,29 +38,25 @@ class OAuth {
 
   async naverLogin() {
     const oAuthUserInfo = this.body;
+    const registerInfo = {
+      name: oAuthUserInfo.name,
+      email: oAuthUserInfo.email,
+      snsId: oAuthUserInfo.snsId,
+    };
 
     try {
-      const naverUserCheck = await OAuthUtil.naverUserCheck(oAuthUserInfo);
+      const userCheck = await OAuthUtil.naverUserCheck(oAuthUserInfo);
 
-      if (naverUserCheck.success) {
+      if (userCheck.success) {
         const clubNum = await StudentStorage.findOneByLoginedId(
-          naverUserCheck.checkedId
+          userCheck.checkedId
         );
-        const userInfo = await StudentStorage.findOneById(
-          naverUserCheck.checkedId
-        );
-
+        const userInfo = await StudentStorage.findOneById(userCheck.checkedId);
         const jwt = await Auth.createJWT(userInfo, clubNum);
 
-        return { success: true, msg: '로그인에 성공하셨습니다.', jwt };
+        return makeResponse(200, '로그인에 성공하셨습니다.', { jwt });
       }
-      return {
-        success: false,
-        msg: '비회원(회원가입이 필요합니다.)',
-        name: oAuthUserInfo.name,
-        email: oAuthUserInfo.email,
-        snsId: oAuthUserInfo.snsId,
-      };
+      return makeResponse(400, '비회원(회원가입이 필요합니다.)', registerInfo);
     } catch (err) {
       return Error.ctrl('서버 에러입니다. 서버 개발자에게 얘기해주세요.', err);
     }
