@@ -2,7 +2,9 @@
 
 const request = require('request');
 const Error = require('../../utils/Error');
-const Student = require('../Student/Student');
+const Auth = require('../Auth/Auth');
+// const Student = require('../Student/Student');
+const OAuthUtil = require('./utils');
 const StudentStorage = require('../Student/StudentStorage');
 
 class OAuth {
@@ -33,52 +35,11 @@ class OAuth {
     });
   }
 
-  async signUpCheck() {
-    const student = new Student(this.req);
-    const saveInfo = this.body;
-
-    try {
-      const snsJoinedUser = await StudentStorage.findOneBySnsId(saveInfo.snsId);
-
-      if (snsJoinedUser.success) {
-        const loginResult = await student.naverLogin(student);
-
-        return loginResult;
-      }
-      const generalJoinedUser = await StudentStorage.findOneById(saveInfo.id);
-
-      if (generalJoinedUser) {
-        return { success: false, msg: '일반회원으로 가입된 회원입니다.' };
-      }
-      return { success: false };
-    } catch (err) {
-      return Error.ctrl(
-        '알 수 없는 오류입니다. 서버개발자에게 문의하세요.',
-        err
-      );
-    }
-  }
-
-  async naverUserCheck() {
-    const oAuthUserInfo = this.body;
-
-    try {
-      const user = await StudentStorage.findOneBySnsId(oAuthUserInfo.snsId);
-
-      if (user.success) {
-        return { success: true, checkedId: user.result.studentId };
-      }
-      return { success: false, msg: '비회원(회원가입이 필요합니다.)' };
-    } catch (err) {
-      throw err;
-    }
-  }
-
   async naverLogin() {
     const oAuthUserInfo = this.body;
 
     try {
-      const naverUserCheck = await this.naverUserCheck();
+      const naverUserCheck = await OAuthUtil.naverUserCheck(oAuthUserInfo);
 
       if (naverUserCheck.success) {
         const clubNum = await StudentStorage.findOneByLoginedId(
